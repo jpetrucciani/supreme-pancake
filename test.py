@@ -1,80 +1,86 @@
-import json
+import unittest
 from csv_diff import csv_diff
 
 
-COL_INSENSITIVE = False
+class TestCSVDiff(unittest.TestCase):
+    """tests various cases for the csv differ"""
 
+    def failure(self, info, expected_added=0, expected_removed=0):
+        """checks that the info dict has a failure"""
+        self.assertIsInstance(info, dict)
+        self.assertTrue(info["error"])
+        self.assertEqual(len(info["added"]), expected_added)
+        self.assertEqual(len(info["removed"]), expected_removed)
+        return True
 
-def test_csv(
-    filename: str,
-    new_filename: str,
-    base_dir: str = "./data/",
-    should_error: bool = False,
-    expected_added: int = 0,
-    expected_removed: int = 0,
-    debug: bool = False,
-) -> None:
+    def success(self, info):
+        """checks that the info dict is a complete success"""
+        self.assertIsInstance(info, dict)
+        self.assertFalse(info["error"])
+        self.assertEqual(len(info["added"]), 0)
+        self.assertEqual(len(info["removed"]), 0)
+        return True
 
-    info = csv_diff(
-        "{}{}".format(base_dir, filename), "{}{}".format(base_dir, new_filename)
-    )
+    def test_small_same(self):
+        """tests that diffing against the same file doesn't fail"""
+        info = csv_diff("./data/small.csv", "./data/small.csv")
+        assert self.success(info)
 
-    passing = False
-    if (should_error and info["error"]) or (not should_error and not info["error"]):
-        passing = True
-    else:
-        if expected_added == len(info["added"]) and expected_removed == len(
-            info["removed"]
-        ):
-            passing = True
+    def test_small_row_insensitive(self):
+        """tests the small csvs with row order insensitive"""
+        info = csv_diff("./data/small.csv", "./data/small_row_unordered.csv")
+        assert self.success(info)
 
-    print(
-        "\n\n[{}] {} - {}\n{}".format(
-            "PASS" if passing else "FAIL", filename, new_filename, "-" * 50
-        )
-    )
-    if debug:
-        print(json.dumps(info, sort_keys=True, indent=2))
+    def test_small_dupe(self):
+        """tests the small csvs, with some duplicated rows"""
+        info = csv_diff("./data/small.csv", "./data/small_dupe.csv")
+        assert self.failure(info, expected_added=5)
+
+    def test_small_incorrect(self):
+        """tests the small csvs, with some issues"""
+        info = csv_diff("./data/small.csv", "./data/small_incorrect.csv")
+        assert self.failure(info, expected_added=3, expected_removed=3)
+
+    def test_small_col_insensitive(self):
+        """tests the small csvs, requiring column insensitive"""
+        info = csv_diff("./data/small.csv", "./data/small_col_unordered.csv")
+        assert self.success(info)
+
+    def test_large_col_insensitive(self):
+        """tests the large csvs, requiring column insensitive"""
+        info = csv_diff("./data/large.csv", "./data/large_col_ordered.csv")
+        assert self.success(info)
+
+    def test_large_incorrect(self):
+        """tests the large csvs, with some missing and added rows"""
+        info = csv_diff("./data/large.csv", "./data/large_incorrect.csv")
+        assert self.failure(info, expected_added=31, expected_removed=15)
+
+    def test_large_added(self):
+        """tests the large csvs, with some added rows"""
+        info = csv_diff("./data/large.csv", "./data/large_added.csv")
+        assert self.failure(info, expected_added=31, expected_removed=0)
+
+    def test_large_added_dupe(self):
+        """tests the large csvs, with some added rows and duplicates"""
+        info = csv_diff("./data/large.csv", "./data/large_added_dupe.csv")
+        assert self.failure(info, expected_added=33, expected_removed=0)
+
+    def test_large_modified(self):
+        """tests the large csvs, with some modified rows"""
+        info = csv_diff("./data/large.csv", "./data/large_modified.csv")
+        assert self.failure(info, expected_added=3, expected_removed=3)
+
+    def test_incompatible_csv(self):
+        """tests checking incompatible csvs against each other"""
+        info = csv_diff("./data/small.csv", "./data/large.csv")
+        self.assertTrue(info["error"])
+
+    def test_small_tsv_row_insensitive(self):
+        """tests the small tsvs with row order insensitive"""
+        info = csv_diff("./data/small.tsv", "./data/small_row_unordered.tsv", sep="\t")
+        assert self.success(info)
 
 
 if __name__ == "__main__":
-    """run against some tests"""
-    test_csv(
-        "small.csv",
-        "small_incorrect.csv",
-        should_error=True,
-        expected_added=3,
-        expected_removed=3,
-    )
-
-    # should pass
-    test_csv("small.csv", "small_row_unordered.csv")
-
-    # should pass if you support column order insensitive
-    # otherwise will show 5 added, 5 removed
-    test_csv(
-        "small.csv",
-        "small_col_unordered.csv",
-        should_error=not COL_INSENSITIVE,
-        expected_added=5,
-        expected_removed=5,
-    )
-
-    # should pass if you support column order insensitive
-    # otherwise will give many added/removed
-    test_csv(
-        "large.csv",
-        "large_col_ordered.csv",
-        should_error=not COL_INSENSITIVE,
-        expected_added=1000,
-        expected_removed=1000,
-    )
-
-    # should have many added many removed
-    test_csv(
-        "large.csv",
-        "large_incorrect.csv",
-        should_error=True,
-        expected_added=30,
-        expected_removed=15,
-    )
+    unittest.main()

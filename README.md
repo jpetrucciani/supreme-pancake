@@ -1,6 +1,6 @@
 # supreme-pancake
 
-csv diff'er function
+csv diff function
 
 ## requirements
 - python3.5 +
@@ -12,17 +12,18 @@ The goal of this problem is to implement the `csv_diff` function in `csv_diff.py
 *You can use any python libraries you'd like outside of `csvdiff` or any similar library*
 
 
-The basic implementation of this method should assume:
+### The basic implementation of this method should assume
 - we only care about added/removed rows, and whether or not the diff has an `error` (meaning the two files differ)
-- column order is consistent (however one test has out of order columns)
+- column order is consistent (however two tests have out of order columns)
 - columns are the same between the two files
 - row order doesn't matter
+- the inputs are always a csv (separated by commas ",")
 
 
-Modified rows should show as a removed row (the initial state of the row) and an added row (the new modified version of the row).
+*Modified rows should show as a removed row (the initial state of the row) and an added row (the new modified version of the row).*
 
 
-Further Improvements:
+## further improvements to implement
 - allow for different types of separator for the csv files
 - return columns that are missing/added if the columns don't match
 - allow for column order to be ignored
